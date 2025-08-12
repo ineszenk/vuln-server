@@ -68,7 +68,7 @@ const uploadDir = path.join(__dirname, 'uploads');
 app.get('/files/:filename', (req, res) => {
     console.log("/files/:filename")
 
-    const filename = req.params.filename;
+    const filename = path.basename(req.params.filename);
 
     const filePath = path.join(uploadDir, filename);
 
