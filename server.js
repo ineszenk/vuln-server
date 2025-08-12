@@ -66,25 +66,31 @@ const uploadDir = path.join(__dirname, 'uploads');
 
 // Vulnérabilité : Inclusion de fichier avec un chemin d'accès non sécurisé
 app.get('/files/:filename', (req, res) => {
-    console.log("/files/:filename")
+    const uploadDir = path.join(__dirname, 'uploads');
 
-    const filename = path.basename(req.params.filename);
+    // Autorise uniquement les noms avec lettres, chiffres, points, tirets, underscores
+    const safePattern = /^[a-zA-Z0-9._-]+$/;
+
+    const filename = req.params.filename;
+
+    if (!safePattern.test(filename)) {
+        return res.status(400).send('Nom de fichier invalide');
+    }
 
     const filePath = path.join(uploadDir, filename);
-
     const normalizedPath = path.normalize(filePath);
 
     if (!normalizedPath.startsWith(uploadDir)) {
         return res.status(400).send('Accès refusé');
     }
 
-    // Envoyer le fichier
     res.sendFile(normalizedPath, (err) => {
         if (err) {
             res.status(404).send('Fichier non trouvé');
         }
     });
 });
+
 
 // Vulnérabilité : Injection SQL dans une requête non préparée
 app.get('/user', (req, res) => {
@@ -103,6 +109,15 @@ app.get('/user', (req, res) => {
     });
 });
 
+
+const escapeHtml = (unsafe) =>
+    unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
 // Vulnérabilité : Absence de validation d'entrée sur les requêtes POST
 app.post('/data', csrfProtection,  (req, res) => {
     const { name, age } = req.body;
@@ -114,16 +129,17 @@ app.post('/data', csrfProtection,  (req, res) => {
         return res.status(400).send("Âge invalide");
     }
 
-      // Requête préparée pour éviter l'injection SQL
+    const trimmedName = name.trim();
+
     const stmt = db.prepare(`INSERT INTO users (name, age) VALUES (?, ?)`);
-    stmt.run(name.trim(), ageNumber, function(err) {
+    stmt.run(trimmedName, ageNumber, function(err) {
         if (err) {
             return res.status(500).send("Erreur lors de l'insertion en base");
         }
-        res.send(`Bonjour ${name.trim()}, vous avez ${ageNumber} ans.`);
+        // Réponse avec échappement HTML pour éviter le XSS
+        res.send(`Bonjour ${escapeHtml(trimmedName)}, vous avez ${ageNumber} ans.`);
     });
     stmt.finalize();
-
 });
 
 // Lancer le serveur
