@@ -66,25 +66,18 @@ const uploadDir = path.join(__dirname, 'uploads');
 
 // Vulnérabilité : Inclusion de fichier avec un chemin d'accès non sécurisé
 app.get('/files/:filename', (req, res) => {
-    const uploadDir = path.join(__dirname, 'uploads');
+    // Nettoyer filename : supprimer les séquences ../ en début
+    let filename = req.params.filename.replace(/^(\.\.(\/|\\|$))+/, '');
 
-    // Autorise uniquement les noms avec lettres, chiffres, points, tirets, underscores
-    const safePattern = /^[a-zA-Z0-9._-]+$/;
-
-    const filename = req.params.filename;
-
-    if (!safePattern.test(filename)) {
-        return res.status(400).send('Nom de fichier invalide');
-    }
-
+    // Construire chemin sécurisé
     const filePath = path.join(uploadDir, filename);
-    const normalizedPath = path.normalize(filePath);
 
-    if (!normalizedPath.startsWith(uploadDir)) {
+    // Vérifier que le chemin est bien dans uploadDir
+    if (!filePath.startsWith(uploadDir)) {
         return res.status(400).send('Accès refusé');
     }
 
-    res.sendFile(normalizedPath, (err) => {
+    res.sendFile(filePath, (err) => {
         if (err) {
             res.status(404).send('Fichier non trouvé');
         }
