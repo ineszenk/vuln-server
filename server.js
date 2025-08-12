@@ -74,6 +74,10 @@ app.get('/files/:filename', (req, res) => {
 
     const normalizedPath = path.normalize(filePath);
 
+    if (!normalizedPath.startsWith(uploadDir)) {
+        return res.status(400).send('Accès refusé');
+    }
+
     // Envoyer le fichier
     res.sendFile(normalizedPath, (err) => {
         if (err) {
