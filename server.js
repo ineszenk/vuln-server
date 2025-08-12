@@ -130,7 +130,7 @@ app.post('/data', csrfProtection,  (req, res) => {
             return res.status(500).send("Erreur lors de l'insertion en base");
         }
         // Réponse avec échappement HTML pour éviter le XSS
-        res.send(`Bonjour ${escapeHtml(trimmedName)}, vous avez ${ageNumber} ans.`);
+        res.json({ message: `Bonjour ${trimmedName}, vous avez ${ageNumber} ans.` });
     });
     stmt.finalize();
 });
