@@ -102,8 +102,24 @@ app.get('/user', (req, res) => {
 // Vulnérabilité : Absence de validation d'entrée sur les requêtes POST
 app.post('/data', csrfProtection,  (req, res) => {
     const { name, age } = req.body;
-    db.run(`INSERT INTO users (name, age) VALUES ('${name}', ${age})`);  // Requête vulnérable aux injections
-    res.send(`Bonjour ${name}, vous avez ${age} ans.`);
+    if (typeof name !== 'string' || !name.trim()) {
+        return res.status(400).send("Nom invalide");
+    }
+    const ageNumber = parseInt(age, 10);
+    if (isNaN(ageNumber) || ageNumber < 0 || ageNumber > 120) {
+        return res.status(400).send("Âge invalide");
+    }
+
+      // Requête préparée pour éviter l'injection SQL
+    const stmt = db.prepare(`INSERT INTO users (name, age) VALUES (?, ?)`);
+    stmt.run(name.trim(), ageNumber, function(err) {
+        if (err) {
+            return res.status(500).send("Erreur lors de l'insertion en base");
+        }
+        res.send(`Bonjour ${name.trim()}, vous avez ${ageNumber} ans.`);
+    });
+    stmt.finalize();
+
 });
 
 // Lancer le serveur
