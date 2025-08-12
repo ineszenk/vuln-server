@@ -2,15 +2,35 @@
 const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();  // Base de données SQLite
+const cookieParser = require('cookie-parser'); // pour parser les cookies
+const bodyParser = require('body-parser'); // pour parser le body
+const csrf = require('csurf'); // ✅ import manquant
+
 
 // Créer une instance de l'application Express
 const app = express();
+
 
 // Définir le port d'écoute
 const PORT = 3000;
 
 // Middleware pour analyser les requêtes JSON
 app.use(express.json());
+
+app.use(cookieParser())
+app.use(bodyParser.urlencoded({ extended: false }));
+
+const csrfProtection = csrf({ cookie: true });
+
+
+// Middleware pour envoyer le token à chaque GET
+app.use((req, res, next) => {
+    if (req.method === 'GET') {
+        res.locals.csrfToken = req.csrfToken();
+    }
+    next();
+});
+
 
 // Créer une base de données en mémoire (vulnérabilité potentielle si elle était persistante)
 const db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), (err) => {
@@ -26,6 +46,7 @@ const db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), (err) =
  //   db.run("CREATE TABLE users (name TEXT, age INTEGER)");
 //});
 
+
 // Définir une route GET pour la page d'accueil
 app.get('/', (req, res) => {
     res.send('Bienvenue sur le serveur Express!');
@@ -34,6 +55,10 @@ app.get('/', (req, res) => {
 // Définir une route GET pour une page "hello"
 app.get('/hello', (req, res) => {
     res.send('Hello World!');
+});
+
+app.get('/form', csrfProtection, (req, res) => {
+    res.json({ csrfToken: req.csrfToken() });
 });
 
 const uploadDir = path.join(__dirname, 'uploads');
@@ -75,7 +100,7 @@ app.get('/user', (req, res) => {
 });
 
 // Vulnérabilité : Absence de validation d'entrée sur les requêtes POST
-app.post('/data', (req, res) => {
+app.post('/data', csrfProtection,  (req, res) => {
     const { name, age } = req.body;
     db.run(`INSERT INTO users (name, age) VALUES ('${name}', ${age})`);  // Requête vulnérable aux injections
     res.send(`Bonjour ${name}, vous avez ${age} ans.`);
