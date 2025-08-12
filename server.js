@@ -88,10 +88,10 @@ app.get('/files/:filename', (req, res) => {
 // Vulnérabilité : Injection SQL dans une requête non préparée
 app.get('/user', (req, res) => {
     const userName = req.query.name;
-    const query = `SELECT * FROM users WHERE name = '${userName}'`;  // Requête non préparée
+    const query = `SELECT * FROM users WHERE name = ?`;
     //`SELECT * FROM users WHERE name = 'Paul' OR '1' = '1'`; 
     
-    db.all(query, [], (err, rows) => {
+    db.all(query, [userName], (err, rows) => {
         if (err) {
             res.status(500).send('Erreur du serveur');
         } else if (rows.length > 0) {
