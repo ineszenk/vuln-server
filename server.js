@@ -23,14 +23,6 @@ app.use(bodyParser.urlencoded({ extended: false }));
 const csrfProtection = csrf({ cookie: true });
 
 
-// Middleware pour envoyer le token à chaque GET
-app.use((req, res, next) => {
-    if (req.method === 'GET') {
-        res.locals.csrfToken = req.csrfToken();
-    }
-    next();
-});
-
 
 // Créer une base de données en mémoire (vulnérabilité potentielle si elle était persistante)
 const db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), (err) => {
@@ -89,7 +81,6 @@ app.get('/files/:filename', (req, res) => {
 app.get('/user', (req, res) => {
     const userName = req.query.name;
     const query = `SELECT * FROM users WHERE name = ?`;
-    //`SELECT * FROM users WHERE name = 'Paul' OR '1' = '1'`; 
     
     db.all(query, [userName], (err, rows) => {
         if (err) {
@@ -103,13 +94,6 @@ app.get('/user', (req, res) => {
 });
 
 
-const escapeHtml = (unsafe) =>
-    unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
 
 // Vulnérabilité : Absence de validation d'entrée sur les requêtes POST
 app.post('/data', csrfProtection,  (req, res) => {
